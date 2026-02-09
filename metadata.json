@@ -1,0 +1,5 @@
+{
+  "name": "תהילים יומי",
+  "description": "An elegant Hebrew-centric application for tracking daily Psalm (Tehillim) readings based on the Hebrew calendar, featuring streak tracking with Sabbath protection and AI-generated insights.",
+  "requestFramePermissions": []
+}
