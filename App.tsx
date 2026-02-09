@@ -11,7 +11,7 @@ import { HebrewDateInfo, UserStats, InsightData, CycleType, PsalmRange, Story } 
 import { MONTHLY_SCHEDULE, WEEKLY_SCHEDULE, BOOKS_SCHEDULE } from './constants';
 import { getHebrewDate, isSpecialDay, HEBREW_MONTHS, HEBREW_MONTH_INDEX, getMonthLength, translateEvents, formatHebrewYear } from './services/hebrewDateService';
 import { getDailyInsight } from './services/geminiService';
-import { getChaptersRange, YEHI_RATZON_BEFORE, YEHI_RATZON_AFTER } from './psalmsData';
+import { getChaptersRange, fetchTehillimRange, YEHI_RATZON_BEFORE, YEHI_RATZON_AFTER } from './psalmsData';
 
 const STORAGE_KEY = 'tehillim_daily_user_stats';
 
@@ -47,6 +47,8 @@ const App: React.FC = () => {
   const [showYehiRatzon, setShowYehiRatzon] = useState<'none' | 'before' | 'after'>('none');
   const [isCompletedToday, setIsCompletedToday] = useState(false);
   const [protectedMissedDay, setProtectedMissedDay] = useState<number | null>(null);
+  const [chapters, setChapters] = useState<{ chapter: number; verses: string[] }[]>([]);
+  const [chaptersLoading, setChaptersLoading] = useState(false);
 
   const getRangeForDate = (hDate: HebrewDateInfo | null, cycle: CycleType, dateObj: Date) => {
     if (!hDate) return MONTHLY_SCHEDULE[0];
@@ -258,7 +260,7 @@ const App: React.FC = () => {
     }
   };
 
-  const getActiveChapters = useCallback(() => {
+  const getActiveRange = useCallback(() => {
     let range: { start: number; end: number } = todayRange;
     if (readingMode === 'book' && selectedBook !== null) {
       const book = BOOKS_SCHEDULE.find(b => b.id === selectedBook);
@@ -270,8 +272,21 @@ const App: React.FC = () => {
     } else if (readingMode === 'lilui') {
       range = todayRange;
     }
-    return getChaptersRange(range.start, range.end);
+    return range;
   }, [readingMode, selectedBook, catchupRange, customRange, todayRange]);
+
+  useEffect(() => {
+    if (view !== 'reading') return;
+    const range = getActiveRange();
+    setChaptersLoading(true);
+    fetchTehillimRange(range.start, range.end)
+      .then(setChapters)
+      .catch(() => {
+        // graceful fallback to existing static snippets
+        setChapters(getChaptersRange(range.start, range.end));
+      })
+      .finally(() => setChaptersLoading(false));
+  }, [view, getActiveRange]);
 
   const jumpToSingleChapter = (chap: number) => {
     setCustomRange({ start: chap, end: chap });
@@ -412,21 +427,27 @@ const App: React.FC = () => {
               </div>
 
               <div className="space-y-16 px-1">
-                {getActiveChapters().map((ch) => (
-                  <motion.div key={ch.chapter} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} className="space-y-6">
-                    <div className="flex flex-col items-center">
-                       <span className="text-[9px] font-black text-blue-900/30 uppercase tracking-[0.4em] mb-1">פרק</span>
-                       <h3 className="text-2xl font-black text-slate-800 border-b-2 border-blue-900/10 pb-1 px-5">
-                         {numberToHebrew(ch.chapter)}
-                       </h3>
-                    </div>
-                    <div className="psalm-text text-slate-800">
-                      {ch.verses.map((verse, idx) => (
-                        <span key={idx} className="inline mr-1">{verse}</span>
-                      ))}
-                    </div>
-                  </motion.div>
-                ))}
+                {chaptersLoading ? (
+                  <div className="text-center text-slate-400 mt-8 text-sm">
+                    טוען פרקי תהילים מלאים...
+                  </div>
+                ) : (
+                  chapters.map((ch) => (
+                    <motion.div key={ch.chapter} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} className="space-y-6">
+                      <div className="flex flex-col items-center">
+                        <span className="text-[9px] font-black text-blue-900/30 uppercase tracking-[0.4em] mb-1">פרק</span>
+                        <h3 className="text-2xl font-black text-slate-800 border-b-2 border-blue-900/10 pb-1 px-5">
+                          {numberToHebrew(ch.chapter)}
+                        </h3>
+                      </div>
+                      <div className="psalm-text text-slate-800">
+                        {ch.verses.map((verse, idx) => (
+                          <span key={idx} className="inline mr-1">{verse}</span>
+                        ))}
+                      </div>
+                    </motion.div>
+                  ))
+                )}
               </div>
 
               {/* Yehi Ratzon After */}
