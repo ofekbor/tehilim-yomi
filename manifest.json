@@ -3,13 +3,14 @@
   "name": "תהילים יומי - Tehillim Daily",
   "short_name": "תהילים",
   "description": "קריאת תהילים יומית לפי לוח השנה העברי",
-  "start_url": ".",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#fdfbf7",
   "theme_color": "#1e3a8a",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3389/3389081.png",
+      "src": "https://icon-icons.com/icons2/930/PNG/512/open-book_icon-icons.com_72346.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
